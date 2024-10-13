@@ -185,7 +185,7 @@ jobs:
 
     - name: Build archive
       shell: bash
-        run: |
+      run: |
         7z a "$ARCHIVE.zip" "$ARCHIVE"
         echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
 
