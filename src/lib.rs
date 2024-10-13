@@ -1,30 +1,8 @@
-use base64;
 use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT, edwards::EdwardsPoint, scalar::Scalar};
 use rand_core::OsRng;
 use std::time::{Duration, Instant};
 use std::borrow::Cow;
 use x25519_dalek::{PublicKey, StaticSecret};
-
-pub fn trial(prefix: &str, end: usize, case_sensitive: bool) -> Option<(String, String)> {
-    let private = StaticSecret::new(&mut OsRng);
-    let public = PublicKey::from(&private);
-
-    let public_b64 = base64::encode(public.as_bytes());
-
-    let b64_prefix = if case_sensitive {
-        Cow::Borrowed(&public_b64[..end])
-    } else {
-        Cow::Owned(public_b64[..end].to_ascii_lowercase())
-    };
-
-    if b64_prefix.contains(prefix)
-    {
-        let private_b64 = base64::encode(&private.to_bytes());
-        Some((private_b64, public_b64))
-    } else {
-        None
-    }
-}
 
 // To perform a fast search, our basic algorithm is:
 // loop {
@@ -168,15 +146,6 @@ fn print_bytes(name: &str, b: &[u8; 32]) {
 fn congruent_to(s: Scalar, b: &[u8; 32]) -> bool {
     let s2 = Scalar::from_bytes_mod_order(*b);
     s == s2
-}
-
-#[cfg(off)]
-fn display_scalar(s: Scalar) -> String {
-    let mut st = String::new();
-    for b in s.to_bytes().iter().rev() {
-        st.push_str(format!("{:02x}", b).as_str());
-    }
-    st
 }
 
 fn convert_scalar_to_privkey(s: Scalar) -> StaticSecret {
@@ -410,14 +379,14 @@ where
     T: Fn(&EdwardsPoint) -> bool,
 {
     let seed = Seed::generate();
-    let both = seed.scan().find(|(_, point)| check(&point)).unwrap();
+    let both = seed.scan().find(|(_, point)| check(point)).unwrap();
     seed.convert_both(both)
 }
 
 pub fn search_for_prefix(prefix: &str, start: usize, end: usize, case_sensitive : bool) -> (StaticSecret, PublicKey) {
     let check = make_check_predicate(prefix, start, end, case_sensitive);
     let seed = Seed::generate();
-    let both = seed.scan().find(|(_, point)| check(&point)).unwrap();
+    let both = seed.scan().find(|(_, point)| check(point)).unwrap();
     seed.convert_both(both)
 }
 
@@ -449,8 +418,8 @@ mod test {
         let (privkey, pubkey) = search(check);
         println!(
             "priv: {}, pub: {}",
-            base64::encode(&privkey.to_bytes()),
-            base64::encode(&pubkey.as_bytes())
+            base64::encode(privkey.to_bytes()),
+            base64::encode(pubkey.as_bytes())
         );
     }
 
