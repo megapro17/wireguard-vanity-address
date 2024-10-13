@@ -47,7 +47,7 @@ fn b2d_base64_contains(c: &mut Criterion) {
 }
 
 fn b2e_total_point_checking(c: &mut Criterion) {
-    let check = make_check_predicate("****", 0, 10);
+    let check = make_check_predicate("****", 0, 10, false);
     let seed = Seed::generate();
     let mut scan = seed.scan();
     let (_count, point) = scan.next().unwrap();
@@ -57,7 +57,7 @@ fn b2e_total_point_checking(c: &mut Criterion) {
 }
 
 fn b3_point_generation_and_checking(c: &mut Criterion) {
-    let check = make_check_predicate("****", 0, 10);
+    let check = make_check_predicate("****", 0, 10, false);
     let seed = Seed::generate();
     let mut scan = seed.scan();
     c.bench_function("b3_point_generation_and_checking", |b| {

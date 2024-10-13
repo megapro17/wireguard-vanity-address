@@ -2,15 +2,22 @@ use base64;
 use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT, edwards::EdwardsPoint, scalar::Scalar};
 use rand_core::OsRng;
 use std::time::{Duration, Instant};
+use std::borrow::Cow;
 use x25519_dalek::{PublicKey, StaticSecret};
 
-pub fn trial(prefix: &str, start: usize, end: usize) -> Option<(String, String)> {
+pub fn trial(prefix: &str, end: usize, case_sensitive: bool) -> Option<(String, String)> {
     let private = StaticSecret::new(&mut OsRng);
     let public = PublicKey::from(&private);
+
     let public_b64 = base64::encode(public.as_bytes());
-    if public_b64[start..end]
-        .to_ascii_lowercase()
-        .contains(&prefix)
+
+    let b64_prefix = if case_sensitive {
+        Cow::Borrowed(&public_b64[..end])
+    } else {
+        Cow::Owned(public_b64[..end].to_ascii_lowercase())
+    };
+
+    if b64_prefix.contains(prefix)
     {
         let private_b64 = base64::encode(&private.to_bytes());
         Some((private_b64, public_b64))
@@ -379,14 +386,22 @@ pub fn make_check_predicate(
     prefix: &str,
     start: usize,
     end: usize,
+    case_sensitive: bool,
 ) -> impl Fn(&EdwardsPoint) -> bool {
     let prefix = String::from(prefix);
     move |point| {
         let public_b64 = base64::encode(point.to_montgomery().as_bytes());
-        //println!("trial: {}", public_b64);
-        public_b64[start..end]
-            .to_ascii_lowercase()
-            .contains(&prefix)
+        let b64_prefix = if case_sensitive {
+            Cow::Borrowed(&public_b64[start..end])
+        } else {
+            Cow::Owned(public_b64[start..end].to_ascii_lowercase())
+        };
+
+        if case_sensitive {
+            b64_prefix.contains(&prefix)
+        } else {
+            b64_prefix.contains(&prefix.to_ascii_lowercase())
+        }
     }
 }
 
@@ -399,8 +414,8 @@ where
     seed.convert_both(both)
 }
 
-pub fn search_for_prefix(prefix: &str, start: usize, end: usize) -> (StaticSecret, PublicKey) {
-    let check = make_check_predicate(prefix, start, end);
+pub fn search_for_prefix(prefix: &str, start: usize, end: usize, case_sensitive : bool) -> (StaticSecret, PublicKey) {
+    let check = make_check_predicate(prefix, start, end, case_sensitive);
     let seed = Seed::generate();
     let both = seed.scan().find(|(_, point)| check(&point)).unwrap();
     seed.convert_both(both)
@@ -410,7 +425,7 @@ pub fn search_for_prefix(prefix: &str, start: usize, end: usize) -> (StaticSecre
 pub fn measure_rate() -> f64 {
     use ScanResults::*;
     // prefix with characters that will never match
-    let check = make_check_predicate("****", 0, 10);
+    let check = make_check_predicate("****", 0, 10, false);
     Seed::generate()
         .scan_progress()
         .map(|res| {
@@ -430,7 +445,7 @@ mod test {
 
     #[test]
     fn test_search() {
-        let check = make_check_predicate("aaa", 0, 10);
+        let check = make_check_predicate("aaa", 0, 10, false);
         let (privkey, pubkey) = search(check);
         println!(
             "priv: {}, pub: {}",

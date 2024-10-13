@@ -75,10 +75,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         .author("Brian Warner <warner@lothar.com>")
         .about("finds Wireguard keypairs with a given string prefix")
         .arg(
+            Arg::with_name("CASE")
+                .long("case-sensitive")
+                .help("Use case-sensitive matching"),
+        )
+        .arg(
             Arg::with_name("RANGE")
                 .long("in")
                 .takes_value(true)
-                .help("NAME must be found within first RANGE chars of pubkey (default: 10)"),
+                .help("NAME must be found within first RANGE chars of pubkey (default: 10, 0 means actual prefix)"),
         )
         .arg(
             Arg::with_name("NAME")
@@ -86,6 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .help("string to find near the start of the pubkey"),
         )
         .get_matches();
+    let case_sensitive = matches.is_present("CASE");
     let prefix = matches.value_of("NAME").unwrap().to_ascii_lowercase();
     let len = prefix.len();
     let end: usize = 44.min(match matches.value_of("RANGE") {
@@ -98,6 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     });
+    let end = if end == 0 { len } else { end };
     if end < len {
         return Err(ParseError(format!("range {} is too short for len={}", end, len)).into());
     }
@@ -107,7 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut num = offsets;
     let mut denom = 1u64;
     prefix.chars().for_each(|c| {
-        if c.is_ascii_alphabetic() {
+        if !case_sensitive && c.is_ascii_alphabetic() {
             num *= 2; // letters can match both uppercase and lowercase
         }
         denom *= 64; // base64
@@ -143,7 +150,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 1M trials takes about 10s on my laptop, so let it run for 1000s
     (0..100_000_000)
         .into_par_iter()
-        .map(|_| search_for_prefix(&prefix, 0, end))
+        .map(|_| search_for_prefix(&prefix, 0, end, case_sensitive))
         .try_for_each(print)?;
     Ok(())
 }
