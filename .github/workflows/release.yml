@@ -13,7 +13,6 @@ jobs:
   # from building the release so that we only create the release once.
   build-release:
     name: build-release
-    needs: ['create-release']
     runs-on: ${{ matrix.os }}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
