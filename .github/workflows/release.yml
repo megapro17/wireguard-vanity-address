@@ -1,10 +1,8 @@
 name: release
-
 # https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml
-
-# Only do the release on x.y.z tags.
 on:
   workflow_dispatch:
+
 # We need this to be able to create releases.
 permissions:
   contents: write
