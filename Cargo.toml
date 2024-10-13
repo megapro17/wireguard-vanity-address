@@ -1,6 +1,6 @@
 [package]
 name = "wireguard-vanity-address"
-version = "0.4.1-alpha.0"
+version = "0.5.0"
 edition = "2018"
 authors = ["Brian Warner <warner@lothar.com>"]
 description = "Find Wireguard VPN keypairs with a specific readable string"
@@ -21,14 +21,14 @@ travis-ci = { repository = "warner/wireguard-vanity-address" }
 [dependencies]
 clap = "4.5.20"
 rayon = "1.10"
-base64 = "0.22.1"
-rand_core = { version = "0.5", default-features = false, features = ["getrandom"] }
-x25519-dalek = "0.6"
-curve25519-dalek = "2.1"
+base64 = "0.22"
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+curve25519-dalek = "4.1"
 num_cpus = "1.16"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.5"
 
 [lib]
 name = "wireguard_vanity_lib"

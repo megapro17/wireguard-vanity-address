@@ -205,11 +205,12 @@ fn convert_scalar_to_privkey(s: Scalar) -> StaticSecret {
     // this panics rather than returning an Option because we should
     // always be starting from a well-behaved scalar, and should never
     // get into the situation where we can't convert it
+    
     let alias_bytes = match s.to_bytes()[0] & 0b0111 {
-        4 => alias4_bytes,
-        7 => alias5_bytes,
-        2 => alias6_bytes,
-        5 => alias7_bytes,
+        4 => alias4_bytes, // 100
+        7 => alias5_bytes, // 111
+        2 => alias6_bytes, // 010
+        5 => alias7_bytes, // 101
         _ => panic!("unable to convert scalar"),
     };
     let privkey = StaticSecret::from(alias_bytes);
@@ -247,9 +248,19 @@ pub struct ScanProgress {
 
 impl Seed {
     pub fn generate() -> Seed {
-        let x = StaticSecret::new(&mut OsRng);
-        let base_scalar = Scalar::from_bytes_mod_order(x.to_bytes());
-        if x.to_bytes() != convert_scalar_to_privkey(base_scalar).to_bytes() {
+        let x = StaticSecret::random_from_rng(&mut OsRng);
+        let mut test = x.to_bytes();
+        test[0] &= 248; // Clear the lowest 3 bits
+        test[31] &= 127; // Clear the highest bit
+        test[31] |= 64;  // Set the second highest bit
+        // 2.0.0-rc.3
+        // StaticSecret serialization and to_bytes() no longer returns clamped integers. 
+        // Clamping is still always done during scalar-point multiplication.
+        // 
+        // TODO
+
+        let base_scalar = Scalar::from_bytes_mod_order(test);
+        if test != convert_scalar_to_privkey(base_scalar).to_bytes() {
             panic!("shouldn't happen");
             // but if for some reason we can't avoid it, we could just re-roll
             // return None;
