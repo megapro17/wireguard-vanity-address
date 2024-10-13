@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT, edwards::EdwardsPoint, scalar::Scalar};
 use rand_core::OsRng;
 use std::time::{Duration, Instant};
@@ -359,7 +360,7 @@ pub fn make_check_predicate(
 ) -> impl Fn(&EdwardsPoint) -> bool {
     let prefix = String::from(prefix);
     move |point| {
-        let public_b64 = base64::encode(point.to_montgomery().as_bytes());
+        let public_b64 = BASE64_STANDARD.encode(point.to_montgomery().as_bytes());
         let b64_prefix = if case_sensitive {
             Cow::Borrowed(&public_b64[start..end])
         } else {
@@ -418,8 +419,8 @@ mod test {
         let (privkey, pubkey) = search(check);
         println!(
             "priv: {}, pub: {}",
-            base64::encode(privkey.to_bytes()),
-            base64::encode(pubkey.as_bytes())
+            BASE64_STANDARD.encode(privkey.to_bytes()),
+            BASE64_STANDARD.encode(pubkey.as_bytes())
         );
     }
 

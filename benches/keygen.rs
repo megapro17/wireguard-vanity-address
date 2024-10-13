@@ -1,3 +1,5 @@
+use base64::prelude::*;
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use curve25519_dalek::{
@@ -32,7 +34,7 @@ fn b2c_bytes_to_base64(c: &mut Criterion) {
     let mt_point: MontgomeryPoint = ed_point.to_montgomery();
     let bytes = mt_point.as_bytes();
     c.bench_function("b2c_bytes_to_base64", |b| {
-        b.iter(|| base64::encode(black_box(&bytes)))
+        b.iter(|| BASE64_STANDARD.encode(black_box(&bytes)))
     });
 }
 
@@ -40,7 +42,7 @@ fn b2d_base64_contains(c: &mut Criterion) {
     let ed_point: EdwardsPoint = Scalar::random(&mut OsRng) * ED25519_BASEPOINT_POINT;
     let mt_point: MontgomeryPoint = ed_point.to_montgomery();
     let bytes = mt_point.as_bytes();
-    let public_b64 = base64::encode(bytes);
+    let public_b64 = BASE64_STANDARD.encode(bytes);
     c.bench_function("b2d_base64_contains", |b| {
         b.iter(|| public_b64[0..10].to_ascii_lowercase().contains("****"))
     });

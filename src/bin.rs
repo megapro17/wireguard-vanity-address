@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt;
 use std::io::{self, Write};
 
+use base64::prelude::*;
 use clap::{App, AppSettings, Arg};
 use rayon::prelude::*;
 use wireguard_vanity_lib::{measure_rate, search_for_prefix};
@@ -48,8 +49,8 @@ fn format_rate(rate: f64) -> String {
 fn print(res: (StaticSecret, PublicKey)) -> Result<(), io::Error> {
     let private: StaticSecret = res.0;
     let public: PublicKey = res.1;
-    let private_b64 = base64::encode(private.to_bytes());
-    let public_b64 = base64::encode(public.as_bytes());
+    let private_b64 = BASE64_STANDARD.encode(private.to_bytes());
+    let public_b64 = BASE64_STANDARD.encode(public.as_bytes());
     writeln!(
         io::stdout(),
         "private {}  public {}",
