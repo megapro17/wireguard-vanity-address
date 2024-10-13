@@ -1,13 +1,7 @@
 name: release
-
 # https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml
-
-# Only do the release on x.y.z tags.
 on:
   workflow_dispatch:
-# We need this to be able to create releases.
-permissions:
-  contents: write
 
 jobs:
   # The create-release job runs purely to initialize the GitHub release itself,
@@ -15,7 +9,6 @@ jobs:
   # from building the release so that we only create the release once.
   build-release:
     name: build-release
-    needs: ['create-release']
     runs-on: ${{ matrix.os }}
     env:
       # For some builds, we use cross to test on 32-bit and big-endian
@@ -31,10 +24,7 @@ jobs:
       CROSS_VERSION: v0.2.5
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
-      # Build static releases with PCRE2.
-      PCRE2_SYS_STATIC: 1
     strategy:
-      fail-fast: false
       matrix:
         include:
         - build: linux
@@ -105,12 +95,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install packages (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      shell: bash
-      run: |
-        ci/ubuntu-install-packages
-
     - name: Install Rust
       uses: dtolnay/rust-toolchain@master
       with:
@@ -148,11 +132,11 @@ jobs:
     - name: Build release binary
       shell: bash
       run: |
-        ${{ env.CARGO }} build --verbose --release --features pcre2 ${{ env.TARGET_FLAGS }}
+        ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          bin="target/${{ matrix.target }}/release/rg.exe"
+          bin="target/${{ matrix.target }}/release/wireguard-vanity-address.exe"
         else
-          bin="target/${{ matrix.target }}/release/rg"
+          bin="target/${{ matrix.target }}/release/wireguard-vanity-address"
         fi
         echo "BIN=$bin" >> $GITHUB_ENV
 
@@ -174,25 +158,23 @@ jobs:
     - name: Determine archive name
       shell: bash
       run: |
-        version="${{ needs.create-release.outputs.version }}"
-        echo "ARCHIVE=wireguard-vanity-address-$version-${{ matrix.target }}" >> $GITHUB_ENV
+        echo "ARCHIVE=wireguard-vanity-address-${{ matrix.target }}" >> $GITHUB_ENV
 
-    - name: Creating directory for archive
-      shell: bash
-      run: |
-        mkdir -p "$ARCHIVE"/{complete,doc}
-        cp "$BIN" "$ARCHIVE"/
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
+    #- name: Creating directory for archive
+    #  shell: bash
+    #  run: |
+    #    mkdir -p "$ARCHIVE"/
+    #    cp "$BIN" "$ARCHIVE"/
 
-    - name: Build archive
-      shell: bash
-        run: |
-        7z a "$ARCHIVE.zip" "$ARCHIVE"
-        echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+    #- name: Build archive
+    #  shell: bash
+    #  run: |
+    #    7z -mx9 a "$ARCHIVE.7z" "$ARCHIVE"
+    #    echo "ASSET=$ARCHIVE.7z" >> $GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.ASSET }}
-        path: ${{ env.ASSET }}
+        name: ${{ env.ARCHIVE }}
+        path: ${{ env.BIN }}
+        compression-level: 9
