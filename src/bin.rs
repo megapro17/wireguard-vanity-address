@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .about("finds Wireguard keypairs with a given string prefix")
         .arg(
             Arg::with_name("CASE")
+                .short("c")
                 .long("case-sensitive")
                 .help("Use case-sensitive matching"),
         )
