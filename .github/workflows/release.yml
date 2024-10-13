@@ -161,20 +161,21 @@ jobs:
       run: |
         echo "ARCHIVE=wireguard-vanity-address-${{ matrix.target }}" >> $GITHUB_ENV
 
-    - name: Creating directory for archive
-      shell: bash
-      run: |
-        mkdir -p "$ARCHIVE"/
-        cp "$BIN" "$ARCHIVE"/
+    #- name: Creating directory for archive
+    #  shell: bash
+    #  run: |
+    #    mkdir -p "$ARCHIVE"/
+    #    cp "$BIN" "$ARCHIVE"/
 
-    - name: Build archive
-      shell: bash
-      run: |
-        7z -mx9 a "$ARCHIVE.7z" "$ARCHIVE"
-        echo "ASSET=$ARCHIVE.7z" >> $GITHUB_ENV
+    #- name: Build archive
+    #  shell: bash
+    #  run: |
+    #    7z -mx9 a "$ARCHIVE.7z" "$ARCHIVE"
+    #    echo "ASSET=$ARCHIVE.7z" >> $GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.ASSET }}
-        path: ${{ env.ASSET }}
+        name: $ARCHIVE
+        path: $BIN
+        compression-level: 9
