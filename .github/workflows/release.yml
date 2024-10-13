@@ -139,9 +139,9 @@ jobs:
       run: |
         ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          bin="target/${{ matrix.target }}/release/rg.exe"
+          bin="target/${{ matrix.target }}/release/wireguard-vanity-address.exe"
         else
-          bin="target/${{ matrix.target }}/release/rg"
+          bin="target/${{ matrix.target }}/release/wireguard-vanity-address"
         fi
         echo "BIN=$bin" >> $GITHUB_ENV
 
@@ -169,10 +169,7 @@ jobs:
     - name: Creating directory for archive
       shell: bash
       run: |
-        mkdir -p "$ARCHIVE"/{complete,doc}
         cp "$BIN" "$ARCHIVE"/
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
 
     - name: Build archive
       shell: bash
