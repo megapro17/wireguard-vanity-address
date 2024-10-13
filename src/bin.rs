@@ -71,20 +71,22 @@ impl fmt::Display for ParseError {
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = Command::new("wireguard-vanity-address")
         .arg_required_else_help(true)
-        .version("0.3.1")
+        .version("0.5.0")
         .author("Brian Warner <warner@lothar.com>")
         .about("finds Wireguard keypairs with a given string prefix")
         .arg(
             Arg::new("CASE")
                 .short('c')
-                .action(ArgAction::SetTrue)
                 .long("case-sensitive")
+                .action(ArgAction::SetTrue)
                 .help("Use case-sensitive matching"),
         )
         .arg(
             Arg::new("RANGE")
+                .short('i')
                 .long("in")
                 .action(ArgAction::Set)
+                .default_value("10")
                 .help("NAME must be found within first RANGE chars of pubkey (default: 10, 0 means actual prefix)"),
         )
         .arg(
@@ -93,8 +95,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .help("string to find near the start of the pubkey"),
         )
         .get_matches();
-    let case_sensitive = matches.contains_id("CASE");
-    let prefix = matches.get_one::<String>("NAME").unwrap().to_ascii_lowercase();
+    let case_sensitive = matches.get_flag("CASE");
+    let prefix = matches.get_one::<String>("NAME").unwrap();
     let len = prefix.len();
     let end: usize = 44.min(match matches.get_one::<String>("RANGE") {
         Some(val) => val.parse().unwrap(),
@@ -105,10 +107,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err(ParseError(format!("range {} is too short for len={}", end, len)).into());
     }
 
-    let offsets: u64 = 44.min((1 + end - len) as u64);
+    let offsets: u128 = 44.min((1 + end - len) as u128);
     // todo: this is an approximation, offsets=2 != double the chances
     let mut num = offsets;
-    let mut denom = 1u64;
+    let mut denom = 1u128;
     prefix.chars().for_each(|c| {
         if !case_sensitive && c.is_ascii_alphabetic() {
             num *= 2; // letters can match both uppercase and lowercase
@@ -125,7 +127,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // get_physical() appears to be more accurate: hyperthreading doesn't
     // help us much
 
-    if trials_per_key < 2u64.pow(32) {
+    if trials_per_key < 2u128.pow(32) {
         let raw_rate = measure_rate();
         println!(
             "one core runs at {}, CPU cores available: {}",
