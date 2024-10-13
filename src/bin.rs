@@ -2,7 +2,8 @@ use std::error::Error;
 use std::fmt;
 use std::io::{self, Write};
 
-use clap::{App, AppSettings, Arg};
+use base64::prelude::*;
+use clap::{Arg, ArgAction, Command};
 use rayon::prelude::*;
 use wireguard_vanity_lib::{measure_rate, search_for_prefix};
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -48,8 +49,8 @@ fn format_rate(rate: f64) -> String {
 fn print(res: (StaticSecret, PublicKey)) -> Result<(), io::Error> {
     let private: StaticSecret = res.0;
     let public: PublicKey = res.1;
-    let private_b64 = base64::encode(private.to_bytes());
-    let public_b64 = base64::encode(public.as_bytes());
+    let private_b64 = BASE64_STANDARD.encode(private.to_bytes());
+    let public_b64 = BASE64_STANDARD.encode(public.as_bytes());
     writeln!(
         io::stdout(),
         "private {}  public {}",
@@ -68,51 +69,48 @@ impl fmt::Display for ParseError {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = App::new("wireguard-vanity-address")
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .version("0.3.1")
+    let matches = Command::new("wireguard-vanity-address")
+        .arg_required_else_help(true)
+        .version("0.5.0")
         .author("Brian Warner <warner@lothar.com>")
         .about("finds Wireguard keypairs with a given string prefix")
         .arg(
-            Arg::with_name("CASE")
-                .short("c")
+            Arg::new("CASE")
+                .short('c')
                 .long("case-sensitive")
+                .action(ArgAction::SetTrue)
                 .help("Use case-sensitive matching"),
         )
         .arg(
-            Arg::with_name("RANGE")
+            Arg::new("RANGE")
+                .short('i')
                 .long("in")
-                .takes_value(true)
+                .action(ArgAction::Set)
+                .default_value("10")
                 .help("NAME must be found within first RANGE chars of pubkey (default: 10, 0 means actual prefix)"),
         )
         .arg(
-            Arg::with_name("NAME")
+            Arg::new("NAME")
                 .required(true)
                 .help("string to find near the start of the pubkey"),
         )
         .get_matches();
-    let case_sensitive = matches.is_present("CASE");
-    let prefix = matches.value_of("NAME").unwrap().to_ascii_lowercase();
+    let case_sensitive = matches.get_flag("CASE");
+    let prefix = matches.get_one::<String>("NAME").unwrap();
     let len = prefix.len();
-    let end: usize = 44.min(match matches.value_of("RANGE") {
-        Some(range) => range.parse()?,
-        None => {
-            if len <= 10 {
-                10
-            } else {
-                len + 10
-            }
-        }
+    let end: usize = 44.min(match matches.get_one::<String>("RANGE") {
+        Some(val) => val.parse().unwrap(),
+        None => 0,
     });
     let end = if end == 0 { len } else { end };
     if end < len {
         return Err(ParseError(format!("range {} is too short for len={}", end, len)).into());
     }
 
-    let offsets: u64 = 44.min((1 + end - len) as u64);
+    let offsets: u128 = 44.min((1 + end - len) as u128);
     // todo: this is an approximation, offsets=2 != double the chances
     let mut num = offsets;
-    let mut denom = 1u64;
+    let mut denom = 1u128;
     prefix.chars().for_each(|c| {
         if !case_sensitive && c.is_ascii_alphabetic() {
             num *= 2; // letters can match both uppercase and lowercase
@@ -129,7 +127,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // get_physical() appears to be more accurate: hyperthreading doesn't
     // help us much
 
-    if trials_per_key < 2u64.pow(32) {
+    if trials_per_key < 2u128.pow(32) {
         let raw_rate = measure_rate();
         println!(
             "one core runs at {}, CPU cores available: {}",
@@ -150,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 1M trials takes about 10s on my laptop, so let it run for 1000s
     (0..100_000_000)
         .into_par_iter()
-        .map(|_| search_for_prefix(&prefix, 0, end, case_sensitive))
+        .map(|_| search_for_prefix(prefix, 0, end, case_sensitive))
         .try_for_each(print)?;
     Ok(())
 }
