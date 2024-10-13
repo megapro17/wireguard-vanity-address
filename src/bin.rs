@@ -3,7 +3,7 @@ use std::fmt;
 use std::io::{self, Write};
 
 use base64::prelude::*;
-use clap::{App, AppSettings, Arg};
+use clap::{Arg, ArgAction, Command};
 use rayon::prelude::*;
 use wireguard_vanity_lib::{measure_rate, search_for_prefix};
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -69,41 +69,36 @@ impl fmt::Display for ParseError {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = App::new("wireguard-vanity-address")
-        .setting(AppSettings::ArgRequiredElseHelp)
+    let matches = Command::new("wireguard-vanity-address")
+        .arg_required_else_help(true)
         .version("0.3.1")
         .author("Brian Warner <warner@lothar.com>")
         .about("finds Wireguard keypairs with a given string prefix")
         .arg(
-            Arg::with_name("CASE")
-                .short("c")
+            Arg::new("CASE")
+                .short('c')
+                .action(ArgAction::SetTrue)
                 .long("case-sensitive")
                 .help("Use case-sensitive matching"),
         )
         .arg(
-            Arg::with_name("RANGE")
+            Arg::new("RANGE")
                 .long("in")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .help("NAME must be found within first RANGE chars of pubkey (default: 10, 0 means actual prefix)"),
         )
         .arg(
-            Arg::with_name("NAME")
+            Arg::new("NAME")
                 .required(true)
                 .help("string to find near the start of the pubkey"),
         )
         .get_matches();
-    let case_sensitive = matches.is_present("CASE");
-    let prefix = matches.value_of("NAME").unwrap().to_ascii_lowercase();
+    let case_sensitive = matches.contains_id("CASE");
+    let prefix = matches.get_one::<String>("NAME").unwrap().to_ascii_lowercase();
     let len = prefix.len();
-    let end: usize = 44.min(match matches.value_of("RANGE") {
-        Some(range) => range.parse()?,
-        None => {
-            if len <= 10 {
-                10
-            } else {
-                len + 10
-            }
-        }
+    let end: usize = 44.min(match matches.get_one::<String>("RANGE") {
+        Some(val) => val.parse().unwrap(),
+        None => 0,
     });
     let end = if end == 0 { len } else { end };
     if end < len {
