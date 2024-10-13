@@ -3,10 +3,6 @@ name: release
 on:
   workflow_dispatch:
 
-# We need this to be able to create releases.
-permissions:
-  contents: write
-
 jobs:
   # The create-release job runs purely to initialize the GitHub release itself,
   # and names the release after the `x.y.z` tag that was pushed. It's separate
@@ -163,8 +159,7 @@ jobs:
     - name: Determine archive name
       shell: bash
       run: |
-        version="${{ needs.create-release.outputs.version }}"
-        echo "ARCHIVE=wireguard-vanity-address-$version-${{ matrix.target }}" >> $GITHUB_ENV
+        echo "ARCHIVE=wireguard-vanity-address-${{ matrix.target }}" >> $GITHUB_ENV
 
     - name: Creating directory for archive
       shell: bash
@@ -174,8 +169,8 @@ jobs:
     - name: Build archive
       shell: bash
       run: |
-        7z a "$ARCHIVE.zip" "$ARCHIVE"
-        echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+        7z -mx9 a "$ARCHIVE.7z" "$ARCHIVE"
+        echo "ASSET=$ARCHIVE.7z" >> $GITHUB_ENV
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
